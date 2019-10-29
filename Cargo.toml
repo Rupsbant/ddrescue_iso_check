@@ -1,0 +1,7 @@
+[package]
+name = "dd_iso_check"
+version = "0.1.0"
+authors = ["Ruben Lapauw <Ruben.Lapauw@cs.kuleuven.be>"]
+edition = "2018"
+
+[dependencies]
