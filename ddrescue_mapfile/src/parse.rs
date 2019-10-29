@@ -1,7 +1,8 @@
 use super::data::*;
 use nom::{
     character::complete::{digit1, hex_digit1, line_ending, not_line_ending, space1},
-    dbg_dmp, delimited, do_parse, map, map_res, named, opt, preceded, switch, tag, take, value,
+    delimited, do_parse, eof, many0, map, map_res, named, opt, preceded, return_error,
+    separated_list, switch, tag, take, value,
 };
 
 pub struct ParseError;
@@ -13,22 +14,20 @@ fn from_dec(input: &str) -> Result<u32, std::num::ParseIntError> {
     u32::from_str_radix(input, 10)
 }
 
-named!(comment<&str, String>, delimited!(tag!("#"), map!(dbg_dmp!(not_line_ending), Into::into), line_ending));
 named!(dec_u32<&str, u32>, map_res!(digit1, from_dec));
 named!(hex_u32<&str, u32>, preceded!(tag!("0x"), map_res!(hex_digit1, from_hex)));
 named!(address<&str, Address>, map!(hex_u32, Address));
 named!(size<&str, Size>, map!(hex_u32, Size));
 named!(pass<&str, Pass>, map!(dec_u32, Pass));
-named!(current_status<&str, CurrentStatus>,
-    switch!(take!(1),
-        "?" => value!(CurrentStatus::CopyNonTriedBlock) |
-        "*" => value!(CurrentStatus::TrimmingBlock) |
-        "/" => value!(CurrentStatus::ScrapingBlock) |
-        "-" => value!(CurrentStatus::RetryBadSector) |
-        "F" => value!(CurrentStatus::Filling) |
-        "G" => value!(CurrentStatus::Approximate) |
-        "+" => value!(CurrentStatus::Finished)
-    ));
+named!(current_status<&str, CurrentStatus>, switch!(take!(1),
+    "?" => value!(CurrentStatus::CopyNonTriedBlock) |
+    "*" => value!(CurrentStatus::TrimmingBlock) |
+    "/" => value!(CurrentStatus::ScrapingBlock) |
+    "-" => value!(CurrentStatus::RetryBadSector) |
+    "F" => value!(CurrentStatus::Filling) |
+    "G" => value!(CurrentStatus::Approximate) |
+    "+" => value!(CurrentStatus::Finished)
+));
 named!(block_status<&str, BlockStatus>, switch!(take!(1),
     "?" => value!(BlockStatus::Untried) |
     "*" => value!(BlockStatus::NonTrimmed) |
@@ -38,19 +37,34 @@ named!(block_status<&str, BlockStatus>, switch!(take!(1),
 ));
 
 named!(current_state<&str, CurrentState>, do_parse!(
-    current_pos: address >>
-    space1 >>
+    current_pos:    address >>
+                    space1 >>
     current_status: current_status >>
-    current_pass: opt!(preceded!(space1, pass)) >>
+    current_pass:   opt!(preceded!(space1, pass)) >>
     (CurrentState{current_pos, current_status, current_pass})
 ));
 named!(block<&str, Block>, do_parse!(
-    pos: address >>
-    space1 >>
-    size: size >>
-    space1 >>
-    status: block_status >>
+    pos:            address >>
+                    space1 >>
+    size:           size >>
+                    space1 >>
+    status:         block_status >>
     (Block{pos, size, status})
+));
+
+named!(comment<&str, &str>, delimited!(tag!("#"), not_line_ending, line_ending));
+named!(comment_lines<&str, ()>, value!((), many0!(comment)));
+named!(mapfile<&str, MapFile>, do_parse!(
+                    comment_lines >>
+    current_state:  return_error!(current_state) >>
+                    line_ending >>
+    blocks:         separated_list!(line_ending, preceded!(comment_lines, block)) >>
+                    opt!(line_ending) >>
+                    eof!() >>
+    (MapFile {
+        current_state,
+        blocks,
+    })
 ));
 
 #[cfg(test)]
@@ -139,5 +153,53 @@ mod tests {
                 }
             ))
         );
+    }
+
+    #[test]
+    fn test_file() {
+        assert_eq!(
+            mapfile(
+                "# Rescue Logfile.
+# current_pos  current_status
+0x24F35400     +
+#      pos        size  status
+0x00000000  0x2237B000  +
+0x2237B000  0x02BBA800  -"
+            ),
+            Ok((
+                "",
+                MapFile {
+                    current_state: CurrentState {
+                        current_pos: Address(0x24f35400),
+                        current_status: CurrentStatus::Finished,
+                        current_pass: None,
+                    },
+                    blocks: vec![
+                        Block {
+                            pos: Address(0x0),
+                            size: Size(0x2237B000),
+                            status: BlockStatus::Finished,
+                        },
+                        Block {
+                            pos: Address(0x2237B000),
+                            size: Size(0x02BBA800),
+                            status: BlockStatus::BadSector,
+                        },
+                    ],
+                },
+            )),
+        )
+    }
+    #[test]
+    fn test_mapfile_eof() {
+        assert!(mapfile(
+            "# Rescue Logfile.
+# current_pos  current_status
+0x24F35400     +
+#      pos        size  status
+0x00000000  0x2237B000  +
+0x2237B000  0x02BBA800  -;"
+        )
+        .is_err());
     }
 }

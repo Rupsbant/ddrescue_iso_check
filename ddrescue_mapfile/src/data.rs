@@ -26,7 +26,6 @@ pub enum BlockStatus {
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct MapFile {
-    pub comments: Vec<String>,
     pub current_state: CurrentState,
     pub blocks: Vec<Block>,
 }
