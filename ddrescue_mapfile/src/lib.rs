@@ -1,4 +1,5 @@
-pub mod parse;
-pub mod data;
+mod parse;
+mod data;
 
-pub struct ParseError;
+pub use data::*;
+pub use parse::parse_mapfile;

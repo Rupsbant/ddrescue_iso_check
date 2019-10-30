@@ -5,3 +5,7 @@ authors = ["Ruben Lapauw <Ruben.Lapauw@cs.kuleuven.be>"]
 edition = "2018"
 
 [dependencies]
+ddrescue_mapfile = {path = "./ddrescue_mapfile"}
+iso9660 = { path = "./iso9660-rs" }
+nom = "5"
+clap = "2.33"

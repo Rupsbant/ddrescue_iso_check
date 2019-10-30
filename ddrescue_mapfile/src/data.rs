@@ -1,9 +1,9 @@
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Hash)]
-pub struct Address(pub u32);
+pub struct Address(pub u64);
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Hash)]
-pub struct Pass(pub u32);
+pub struct Pass(pub u64);
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Hash)]
-pub struct Size(pub u32);
+pub struct Size(pub u64);
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum CurrentStatus {
