@@ -1,4 +1,4 @@
-use ddrescue_mapfile::{Address, Block, BlockStatus, MapFile, Size};
+use ddrescue_mapfile::{BlockStatus, MapFile};
 
 pub struct BadSectors {
     non_overlapping_intervals: Vec<(usize, usize)>,
@@ -36,7 +36,7 @@ impl BadSectors {
     pub fn contains_bad_sector(&self, start: usize, end: usize) -> Result<(), (usize, usize)> {
         let location = self
             .non_overlapping_intervals
-            .binary_search_by_key(&end, |&(start, end)| start);
+            .binary_search_by_key(&end, |&(start, _end)| start);
         let idx = match location {
             Ok(found) => found,
             Err(found) => found,

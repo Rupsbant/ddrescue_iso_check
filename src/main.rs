@@ -1,7 +1,6 @@
 mod validated_mapfile;
 use ddrescue_mapfile::parse_mapfile;
-use iso9660::{DirectoryEntry, DirectoryEntryHeader, ISODirectory, ISOFile, ISO9660};
-use nom::IResult;
+use iso9660::{DirectoryEntry, DirectoryEntryHeader, ISO9660};
 use std::fs::File;
 use std::io::Read;
 use validated_mapfile::BadSectors;
@@ -10,7 +9,6 @@ fn mapfile(file: &str) -> BadSectors {
     let mut mapfile = File::open(file).unwrap();
     let mut data = String::new();
     mapfile.read_to_string(&mut data).unwrap();
-    println!("{:?}", data);
     parse_mapfile(&data).unwrap().1.into()
 }
 
@@ -21,8 +19,8 @@ impl BadSectors {
         let bad = self.contains_bad_sector(start, end);
         if let Err((bad_start, bad_end)) = bad {
             println!(
-                "Bad entry {:?} : {:?} to {:?} is bad",
-                identifier, bad_start, bad_end
+                "Bad entry {:?} ({:?} to {:?}) : {:?} to {:?} is bad",
+                identifier, start, end, bad_start, bad_end
             );
         }
     }
@@ -30,7 +28,7 @@ impl BadSectors {
 use clap::{App, Arg, ArgGroup};
 
 fn main() {
-    let m = App::new("dd_iso_check")
+    let m = App::new("ddrescue_iso_check")
         .version("1.0")
         .about("Check which files in an iso are bad given a ddrescue mapfile.")
         .author("Ruben Lapauw")
